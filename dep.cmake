@@ -98,6 +98,35 @@ function(dep_build name)
 	# https://gitlab.kitware.com/cmake/cmake/-/issues/16341
 	# for more details
 
+	set(_systems Linux_x86_64 Windows_AMD64)
+	cmake_parse_arguments(_parsed_DOWNLOAD_STEP "" "" "${_systems}" ${_parsed_DOWNLOAD_STEP})
+	set(_parsed_DOWNLOAD_STEP ${_parsed_DOWNLOAD_STEP_UNPARSED_ARGUMENTS})
+	cmake_parse_arguments(_parsed_UPDATE_STEP "" "" "${_systems}" ${_parsed_UPDATE_STEP})
+	set(_parsed_UPDATE_STEP ${_parsed_UPDATE_STEP_UNPARSED_ARGUMENTS})
+	cmake_parse_arguments(_parsed_CONFIGURE_STEP "" "" "${_systems}" ${_parsed_CONFIGURE_STEP})
+	set(_parsed_CONFIGURE_STEP ${_parsed_CONFIGURE_STEP_UNPARSED_ARGUMENTS})
+	cmake_parse_arguments(_parsed_BUILD_STEP "" "" "${_systems}" ${_parsed_BUILD_STEP})
+	set(_parsed_BUILD_STEP ${_parsed_BUILD_STEP_UNPARSED_ARGUMENTS})
+	cmake_parse_arguments(_parsed_INSTALL_STEP "" "" "${_systems}" ${_parsed_INSTALL_STEP})
+	set(_parsed_INSTALL_STEP ${_parsed_INSTALL_STEP_UNPARSED_ARGUMENTS})
+
+	set(_system "${CMAKE_SYSTEM_NAME}_${CMAKE_SYSTEM_PROCESSOR}")
+	if(DEFINED _parsed_DOWNLOAD_STEP_${_system})
+		set(_parsed_DOWNLOAD_STEP ${_parsed_DOWNLOAD_STEP} ${_parsed_DOWNLOAD_STEP_${_system}})
+	endif()
+	if(DEFINED _parsed_UPDATE_STEP_${_system})
+		set(_parsed_UPDATE_STEP ${_parsed_UPDATE_STEP} ${_parsed_UPDATE_STEP_${_system}})
+	endif()
+	if(DEFINED _parsed_CONFIGURE_STEP_${_system})
+		set(_parsed_CONFIGURE_STEP ${_parsed_CONFIGURE_STEP} ${_parsed_CONFIGURE_STEP_${_system}})
+	endif()
+	if(DEFINED _parsed_BUILD_STEP_${_system})
+		set(_parsed_BUILD_STEP ${_parsed_BUILD_STEP} ${_parsed_BUILD_STEP_${_system}})
+	endif()
+	if(DEFINED _parsed_INSTALL_STEP_${_system})
+		set(_parsed_INSTALL_STEP ${_parsed_INSTALL_STEP} ${_parsed_INSTALL_STEP_${_system}})
+	endif()
+
 	set(_download_step "\"DOWNLOAD_COMMAND\" \"\"")
 	set(_update_step "\"UPDATE_COMMAND\" \"\"")
 	set(_configure_step "\"CONFIGURE_COMMAND\" \"\"")
@@ -105,23 +134,23 @@ function(dep_build name)
 	set(_install_step "\"INSTALL_COMMAND\" \"\"")
 
 	if(DEFINED _parsed_DOWNLOAD_STEP)
-		_join(" " _download_step "${_parsed_DOWNLOAD_STEP}")
+		_join(" " _download_step ${_parsed_DOWNLOAD_STEP})
 	endif()
 
 	if(DEFINED _parsed_UPDATE_STEP)
-		_join(" " _update_step "${_parsed_UPDATE_STEP}")
+		_join(" " _update_step ${_parsed_UPDATE_STEP})
 	endif()
 
 	if(DEFINED _parsed_CONFIGURE_STEP)
-		_join(" " _configure_step "${_parsed_CONFIGURE_STEP}")
+		_join(" " _configure_step ${_parsed_CONFIGURE_STEP})
 	endif()
 
 	if(DEFINED _parsed_BUILD_STEP)
-		_join(" " _build_step "${_parsed_BUILD_STEP}")
+		_join(" " _build_step ${_parsed_BUILD_STEP})
 	endif()
 
 	if(DEFINED _parsed_INSTALL_STEP)
-		_join(" " _install_step "${_parsed_INSTALL_STEP}")
+		_join(" " _install_step ${_parsed_INSTALL_STEP})
 	endif()
 
 	if(DEFINED _parsed_CMAKE_OPTIONS)
@@ -174,6 +203,8 @@ function(dep_build name)
 				COMMAND ${CMAKE_COMMAND} --build . --config ${_config}
 				WORKING_DIRECTORY ${_build_dir}
 				)
+
+			set_property(DIRECTORY PROPERTY DEP_BUILT_${name}_${_config} TRUE)
 		endforeach()
 	elseif(DEFINED CMAKE_BUILD_TYPE)
 		_get_dep_build_type(_config "${_parsed_SUPPORTS_DEBUG}")
@@ -187,5 +218,145 @@ function(dep_build name)
 			COMMAND ${CMAKE_COMMAND} --build .
 			WORKING_DIRECTORY ${_build_dir}
 			)
+
+		set_property(DIRECTORY PROPERTY DEP_BUILT_${name}_${_config} TRUE)
+	endif()
+endfunction()
+
+function(dep_package name target)
+	set(_options SUPPORTS_DEBUG)
+	set(_multi_values DEPENDS FILES LIBS)
+	cmake_parse_arguments(_parsed "${_options}" "" "${_multi_values}" ${ARGN})
+
+	set(_systems Linux_x86_64 Windows_AMD64)
+	cmake_parse_arguments(_parsed_DEPENDS "" "" "${_systems}" ${_parsed_DEPENDS})
+	set(_parsed_DEPENDS ${_parsed_DEPENDS_UNPARSED_ARGUMENTS})
+	cmake_parse_arguments(_parsed_FILES "" "" "${_systems}" ${_parsed_FILES})
+	set(_parsed_FILES ${_parsed_FILES_UNPARSED_ARGUMENTS})
+	cmake_parse_arguments(_parsed_LIBS "" "" "${_systems}" ${_parsed_LIBS})
+	set(_parsed_LIBS ${_parsed_LIBS_UNPARSED_ARGUMENTS})
+
+	set(_system "${CMAKE_SYSTEM_NAME}_${CMAKE_SYSTEM_PROCESSOR}")
+	if(DEFINED _parsed_DEPENDS_${_system})
+		set(_parsed_DEPENDS ${_parsed_DEPENDS} ${_parsed_DEPENDS_${_system}})
+	endif()
+	if(DEFINED _parsed_FILES_${_system})
+		set(_parsed_FILES ${_parsed_FILES} ${_parsed_FILES_${_system}})
+	endif()
+	if(DEFINED _parsed_LIBS_${_system})
+		set(_parsed_LIBS ${_parsed_LIBS} ${_parsed_LIBS_${_system}})
+	endif()
+
+	string(TOUPPER "${name}" _big_name)
+
+	_get_dep_directory(_dep_directory)
+
+	if(DEFINED CMAKE_CONFIGURATION_TYPES)
+		_get_dep_configuration_types(_configs "${_parsed_SUPPORTS_DEBUG}")
+	elseif(DEFINED CMAKE_BUILD_TYPE)
+		_get_dep_build_type(_configs "${_parsed_SUPPORTS_DEBUG}")
+	endif()
+
+	set(_valid True)
+	foreach(_config IN ITEMS ${_configs})
+		get_property(_built DIRECTORY PROPERTY DEP_BUILT_${name}_${_config})
+		if(${_built})
+			set(_file_paths PATHS "${_dep_directory}/${_config}/include" NO_DEFAULT_PATH)
+			set(_lib_paths PATHS "${_dep_directory}/${_config}/lib" NO_DEFAULT_PATH)
+		else()
+			set(_file_paths)
+			set(_lib_paths)
+		endif()
+
+		string(TOUPPER "${_config}" _big_config)
+
+		set(_found_all_files True)
+		foreach(_file IN ITEMS ${_parsed_FILES})
+			string(TOUPPER "${_file}" _big_file)
+			string(MAKE_C_IDENTIFIER "${_big_file}" _c_file)
+
+			find_file(FILE_${_c_file}_${_big_config} "${_file}" ${_file_paths})
+
+			if(FILE_${_c_file}_${_big_config})
+				message(STATUS "Looking for ${name} - ${FILE_${_c_file}_${_big_config}}")
+			else()
+				message(STATUS "Looking for ${name} - MISSING ${_file}")
+
+				set(_found_all_files False)
+			endif()
+		endforeach()
+		if(NOT _found_all_files)
+			set(_valid False)
+		endif()
+
+		if(_parsed_LIBS)
+			set(_found_all_libs True)
+			foreach(_lib IN ITEMS ${_parsed_LIBS})
+				string(TOUPPER "${_lib}" _big_lib)
+				string(MAKE_C_IDENTIFIER "${_big_lib}" _c_lib)
+
+				find_library(LIBRARY_${_c_lib}_${_big_config} "${_lib}" ${_lib_paths})
+
+				if(LIBRARY_${_c_lib}_${_big_config})
+					message(STATUS "Looking for ${name} - ${LIBRARY_${_c_lib}_${_big_config}}")
+				else()
+					message(STATUS "Looking for ${name} - MISSING ${_lib}")
+
+					set(_found_all_libs False)
+				endif()
+			endforeach()
+			if(NOT _found_all_libs)
+				set(_valid False)
+			endif()
+		endif()
+	endforeach()
+
+	foreach(_dep IN ITEMS ${_parsed_DEPENDS})
+		if(NOT TARGET ${_dep})
+			set(_valid False)
+		endif()
+	endforeach()
+
+	if(_valid)
+		foreach(_config IN ITEMS ${_configs})
+			string(TOUPPER "${_config}" _big_config)
+
+			add_library(${target}_${_config} INTERFACE)
+
+			foreach(_file IN ITEMS ${_parsed_FILES})
+				string(TOUPPER "${_file}" _big_file)
+				string(MAKE_C_IDENTIFIER "${_big_file}" _c_file)
+
+				string(REGEX REPLACE "/${_file}$" "" _directory "${FILE_${_c_file}_${_big_config}}")
+
+				target_include_directories(${target}_${_config} INTERFACE "${_directory}")
+			endforeach()
+
+			foreach(_lib IN ITEMS ${_parsed_LIBS})
+				string(TOUPPER "${_lib}" _big_lib)
+				string(MAKE_C_IDENTIFIER "${_big_lib}" _c_lib)
+
+				target_link_libraries(${target}_${_config} INTERFACE "${LIBRARY_${_c_lib}_${_big_config}}")
+			endforeach()
+		endforeach()
+
+		add_library(${target} INTERFACE)
+
+		foreach(_dep IN ITEMS ${_parsed_DEPENDS})
+			target_link_libraries(${target} INTERFACE ${_dep})
+		endforeach()
+
+		if(DEFINED CMAKE_CONFIGURATION_TYPES)
+			list(LENGTH _configs _configs_length)
+			if(_configs_length EQUAL 2)
+				list(GET _configs 0 _config0)
+				list(GET _configs 1 _config1)
+				target_link_libraries(${target} INTERFACE optimized ${target}_${_config0} debug ${target}_${_config1})
+			else()
+				target_link_libraries(${target} INTERFACE ${target}_${_configs})
+			endif()
+		else()
+			target_link_libraries(${target} INTERFACE ${target}_${_configs})
+		endif()
 	endif()
 endfunction()
