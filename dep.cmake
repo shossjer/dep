@@ -89,43 +89,45 @@ function(_join glue outvar)
 	set(${outvar} "${_str}" PARENT_SCOPE)
 endfunction()
 
+function(_filter_system var)
+	# todo turns out that CMAKE_SYSTEM_PROCESSOR is not _really_
+	# supported on Windows (they say it is because you are expected to
+	# set it yourself :joy: somehow a very typical CMake-solution to
+	# the problem), anyway, an option might be to look at the
+	# environment variable PROCESSOR_ARCHITECTURE
+	#
+	# https://gitlab.kitware.com/cmake/cmake/-/issues/15170
+	set(_systems Linux_x86_64 Windows_AMD64)
+	set(_system "${CMAKE_SYSTEM_NAME}_${CMAKE_SYSTEM_PROCESSOR}")
+
+	set(_str "")
+	set(_use True)
+	foreach(_arg IN LISTS ${var})
+		if("${_arg}" IN_LIST _systems)
+			if("${_arg}" STREQUAL "${_system}")
+				set(_use True)
+			else()
+				set(_use False)
+			endif()
+		elseif(_use)
+			if(_str)
+				set(_str "${_str};${_arg}")
+			else()
+				set(_str ${_arg})
+			endif()
+		endif()
+	endforeach()
+	set(${var} "${_str}" PARENT_SCOPE)
+endfunction()
+
 function(dep_build name)
-	set(_options FIND_GIT SUPPORTS_DEBUG)
+	set(_options FIND_GIT POLICY_CMP0097 SUPPORTS_DEBUG)
 	set(_multi_values BUILD_STEP CMAKE_OPTIONS CONFIGURE_STEP DOWNLOAD_STEP INSTALL_STEP UPDATE_STEP)
 	cmake_parse_arguments(PARSE_ARGV 0 _parsed "${_options}" "" "${_multi_values}")
 	# note we have to use the 3.7 syntax here in order to properly
 	# handle empty strings as arguments, read the discussion at
 	# https://gitlab.kitware.com/cmake/cmake/-/issues/16341
 	# for more details
-
-	set(_systems Linux_x86_64 Windows_AMD64)
-	cmake_parse_arguments(_parsed_DOWNLOAD_STEP "" "" "${_systems}" ${_parsed_DOWNLOAD_STEP})
-	set(_parsed_DOWNLOAD_STEP ${_parsed_DOWNLOAD_STEP_UNPARSED_ARGUMENTS})
-	cmake_parse_arguments(_parsed_UPDATE_STEP "" "" "${_systems}" ${_parsed_UPDATE_STEP})
-	set(_parsed_UPDATE_STEP ${_parsed_UPDATE_STEP_UNPARSED_ARGUMENTS})
-	cmake_parse_arguments(_parsed_CONFIGURE_STEP "" "" "${_systems}" ${_parsed_CONFIGURE_STEP})
-	set(_parsed_CONFIGURE_STEP ${_parsed_CONFIGURE_STEP_UNPARSED_ARGUMENTS})
-	cmake_parse_arguments(_parsed_BUILD_STEP "" "" "${_systems}" ${_parsed_BUILD_STEP})
-	set(_parsed_BUILD_STEP ${_parsed_BUILD_STEP_UNPARSED_ARGUMENTS})
-	cmake_parse_arguments(_parsed_INSTALL_STEP "" "" "${_systems}" ${_parsed_INSTALL_STEP})
-	set(_parsed_INSTALL_STEP ${_parsed_INSTALL_STEP_UNPARSED_ARGUMENTS})
-
-	set(_system "${CMAKE_SYSTEM_NAME}_${CMAKE_SYSTEM_PROCESSOR}")
-	if(DEFINED _parsed_DOWNLOAD_STEP_${_system})
-		set(_parsed_DOWNLOAD_STEP ${_parsed_DOWNLOAD_STEP} ${_parsed_DOWNLOAD_STEP_${_system}})
-	endif()
-	if(DEFINED _parsed_UPDATE_STEP_${_system})
-		set(_parsed_UPDATE_STEP ${_parsed_UPDATE_STEP} ${_parsed_UPDATE_STEP_${_system}})
-	endif()
-	if(DEFINED _parsed_CONFIGURE_STEP_${_system})
-		set(_parsed_CONFIGURE_STEP ${_parsed_CONFIGURE_STEP} ${_parsed_CONFIGURE_STEP_${_system}})
-	endif()
-	if(DEFINED _parsed_BUILD_STEP_${_system})
-		set(_parsed_BUILD_STEP ${_parsed_BUILD_STEP} ${_parsed_BUILD_STEP_${_system}})
-	endif()
-	if(DEFINED _parsed_INSTALL_STEP_${_system})
-		set(_parsed_INSTALL_STEP ${_parsed_INSTALL_STEP} ${_parsed_INSTALL_STEP_${_system}})
-	endif()
 
 	set(_download_step "\"DOWNLOAD_COMMAND\" \"\"")
 	set(_update_step "\"UPDATE_COMMAND\" \"\"")
@@ -134,23 +136,28 @@ function(dep_build name)
 	set(_install_step "\"INSTALL_COMMAND\" \"\"")
 
 	if(DEFINED _parsed_DOWNLOAD_STEP)
-		_join(" " _download_step ${_parsed_DOWNLOAD_STEP})
+		_filter_system(_parsed_DOWNLOAD_STEP)
+		_join(" " _download_step "${_parsed_DOWNLOAD_STEP}")
 	endif()
 
 	if(DEFINED _parsed_UPDATE_STEP)
-		_join(" " _update_step ${_parsed_UPDATE_STEP})
+		_filter_system(_parsed_UPDATE_STEP)
+		_join(" " _update_step "${_parsed_UPDATE_STEP}")
 	endif()
 
 	if(DEFINED _parsed_CONFIGURE_STEP)
-		_join(" " _configure_step ${_parsed_CONFIGURE_STEP})
+		_filter_system(_parsed_CONFIGURE_STEP)
+		_join(" " _configure_step "${_parsed_CONFIGURE_STEP}")
 	endif()
 
 	if(DEFINED _parsed_BUILD_STEP)
-		_join(" " _build_step ${_parsed_BUILD_STEP})
+		_filter_system(_parsed_BUILD_STEP)
+		_join(" " _build_step "${_parsed_BUILD_STEP}")
 	endif()
 
 	if(DEFINED _parsed_INSTALL_STEP)
-		_join(" " _install_step ${_parsed_INSTALL_STEP})
+		_filter_system(_parsed_INSTALL_STEP)
+		_join(" " _install_step "${_parsed_INSTALL_STEP}")
 	endif()
 
 	if(DEFINED _parsed_CMAKE_OPTIONS)

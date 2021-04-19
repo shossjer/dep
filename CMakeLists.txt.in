@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 
+if(@_parsed_POLICY_CMP0097@ AND POLICY CMP0097)
+	cmake_policy(SET CMP0097 NEW)
+endif()
+
 include(ExternalProject)
 if(@_parsed_FIND_GIT@)
 	include(FindGit)
