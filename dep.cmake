@@ -12,7 +12,7 @@ define_property(DIRECTORY PROPERTY "DEP_NONDEBUG_CONFIG" INHERITED
 
 define_property(DIRECTORY PROPERTY "DEP_DEBUG_CONFIG" INHERITED
 	BRIEF_DOCS "Configuration type in debug configurations."
-	FULL_DOCS "Configuration type in debug configurations. Ignored by default."
+	FULL_DOCS "Configuration type in debug configurations. Defaults to Debug."
 	)
 
 set(_dep_cmake_current_list_dir "${CMAKE_CURRENT_LIST_DIR}")
@@ -22,6 +22,9 @@ function(_get_dep_configuration_types outvar supports_debug)
 	get_property(_debug DIRECTORY PROPERTY DEP_DEBUG_CONFIG)
 	if(NOT "${_nondebug}")
 		set(_nondebug Release)
+	endif()
+	if(NOT "${_debug}")
+		set(_debug Debug)
 	endif()
 
 	if("${_debug}" STREQUAL "${_nondebug}")
