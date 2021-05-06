@@ -1,6 +1,6 @@
 # DIY External Project
 
-With `dep` you can download, build, and install projects using the
+With dep you can download, build, and install projects using the
 familiar ExternalProject syntax at configuration time.
 
 ## But why?
@@ -59,6 +59,8 @@ dep_package(libprebuilt my_prebuilt_target
 option(BUILD_SOMECMAKEPROJECT "Build some CMake project that I need" ON)
 if(BUILD_SOMECMAKEPROJECT)
    dep_build(somename
+      SUPPORTS_DEBUG
+
       DOWNLOAD_STEP
       GIT_REPOSITORY "https://github.com/myfavoritedeveloper/someproject.git"
       GIT_TAG "1.2.3"
@@ -71,6 +73,8 @@ if(BUILD_SOMECMAKEPROJECT)
 endif()
 
 dep_package(somename my_cmake_dependency
+   SUPPORTS_DEBUG
+
    DEPENDS
    my_prebuilt_target
 
@@ -81,4 +85,53 @@ dep_package(somename my_cmake_dependency
    LIBS
    somelib
    )
+
+target_link_libraries(myproject INTERFACE my_cmake_dependency)
 ```
+
+## Customization
+
+There are three properties that can be set in order to modify the
+functionality of dep.
+
+* `DEP_DIRECTORY` - of type `DIRECTORY`
+
+  The path to where dep will put _all the stuff_. This directory
+  serves as both a working directory (where downloads, source
+  unpacking, and build data is located) as well as the install
+  directory (where the dependencies are all installed to). Unless
+  explicitly set, it will default to `"${CMAKE_SOURCE_DIR}/dep"`.
+
+  Protip: If you build your project with multiple compilers (e.g. gcc
+  and clang), or if you are on Windows and want to use both msvc and
+  your favorite compiler under wsl, do something like the following
+  ```
+  set_property(DIRECTORY PROPERTY DEP_DIRECTORY "${CMAKE_SOURCE_DIR}/dep/${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}")
+  ```
+
+  That way, the dependencies will not collide between your various
+  build setups.
+
+* `DEP_NONDEBUG_CONFIG` - of type `DIRECTORY`
+
+  The build type that should be used for non-debug builds. This is the
+  version of the dependency that will be used by default. Unless
+  explicitly set, it will default to `Release`.
+
+* `DEP_DEBUG_CONFIG` - of type `DIRECTORY`
+
+  The build type that should be used for debug builds. This is the
+  version of the dependency that will be used whenever the dependency
+  is marked with `SUPPORTS_DEBUG` and your project is built with a
+  build type that is listed in the `GLOBAL` property
+  `DEBUG_CONFIGURATIONS`. Unless explicitly set, it will default to
+  `Debug`.
+
+## Quirks
+
+This project is still in its early stages of development, being
+developed by trial an error, and as a result contains a lot of _hacky
+stuff_. Please have a look at the arguments-parsing in `dep_build` for
+a complete list of the available hacks. When the hacks have proven
+themselves useful, they will be upgraded to features and listed more
+publicly on this page somewhere.
