@@ -190,9 +190,9 @@ function(dep_build name)
 		set(_install_step "")
 	endif()
 
-	set(_build_dir "${CMAKE_BINARY_DIR}/dep/${name}")
-
 	_get_dep_directory(_dep_directory)
+
+	set(_build_dir "${_dep_directory}/.build/${name}")
 
 	configure_file(
 		"${_dep_cmake_current_list_dir}/CMakeLists.txt.in"
