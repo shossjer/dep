@@ -10,8 +10,8 @@ familiar ExternalProject syntax at configuration time.
   CMake 3.11 introduced the module FetchContent which at a first
   glance does exactly what this project aims at. However, instead of
   building and installing libraries it makes other (CMake) projects
-  available to be built as part of your own build setup. (If this is
-  an incorrect summary of FetchContent, please tell me!)
+  available to be built as part of your own build setup. Obviously,
+  this does not work for non-cmake projects.
 
 * ExternalProject - https://cmake.org/cmake/help/latest/module/ExternalProject.html
 
@@ -25,8 +25,7 @@ familiar ExternalProject syntax at configuration time.
 
 * Hunter - https://github.com/cpp-pm/hunter
 
-  A package manager that has been around since 2013 (give or take). I
-  have yet to spend some actual time with it.
+  A package manager that has been around since 2013 (give or take).
 
 ## Examples!
 
@@ -83,7 +82,8 @@ dep_package(somename my_cmake_dependency
    someheader2.h
 
    LIBS
-   somelib
+   debug somelibd
+   optimized somelib
    )
 
 target_link_libraries(myproject INTERFACE my_cmake_dependency)
@@ -131,7 +131,7 @@ functionality of dep.
 
 This project is still in its early stages of development, being
 developed by trial an error, and as a result contains a lot of _hacky
-stuff_. Please have a look at the arguments-parsing in `dep_build` for
-a complete list of the available hacks. When the hacks have proven
-themselves useful, they will be upgraded to features and listed more
-publicly on this page somewhere.
+stuff_. Please have a look at the arguments-parsing in `dep_build` and
+`dep_package` for a complete list of the available hacks. When the
+hacks have proven themselves useful, they will be upgraded to features
+and listed more publicly on this page somewhere.
