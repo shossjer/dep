@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.7)
 
+get_property(_dep_directory_defined DIRECTORY PROPERTY "DEP_DIRECTORY" DEFINED)
+if(_dep_directory_defined)
+	return()
+endif()
+
 define_property(DIRECTORY PROPERTY "DEP_DIRECTORY" INHERITED
 	BRIEF_DOCS "Directory where dependencies will be installed to."
 	FULL_DOCS "Directory where dependencies will be installed to."
