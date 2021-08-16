@@ -38,7 +38,7 @@ if(BUILD_PREBUILTLIB)
       TIMEOUT 10
 
       INSTALL_STEP
-      INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_if_different "\$\{_source_dir\}/prebuilt.h" "\$\{_install_prefix\}/include"
+      INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_if_different "\$\{_source_dir\}/prebuilt.h" "\$\{_install_prefix\}/include/dumb_directory"
       Linux_x86_64
       COMMAND ${CMAKE_COMMAND} -E copy_if_different "\$\{_source_dir\}/liblin64.a" "\$\{_install_prefix\}/lib"
       Windows_AMD64
@@ -48,6 +48,7 @@ endif()
 
 dep_package(libprebuilt my_prebuilt_target
    FILES
+   IN_DIRECTORY dumb_directory
    prebuilt.h
 
    LIBS
@@ -78,8 +79,8 @@ dep_package(somename my_cmake_dependency
    my_prebuilt_target
 
    FILES
-   someheader1.h
-   someheader2.h
+   somedir/someheader1.h
+   somedir/someheader2.h
 
    LIBS
    debug somelibd
